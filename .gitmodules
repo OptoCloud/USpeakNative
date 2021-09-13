@@ -1,0 +1,6 @@
+[submodule "libnyquist"]
+	path = libnyquist
+	url = https://github.com/ddiakopoulos/libnyquist.git
+[submodule "fmt"]
+	path = fmt
+	url = https://github.com/fmtlib/fmt.git
