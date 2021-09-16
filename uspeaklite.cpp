@@ -37,6 +37,7 @@ USpeakNative::USpeakLite::USpeakLite()
     , m_recFreq(USpeakNative::OpusCodec::BandModeFrequency(m_bandMode))
     , m_ind(0)
 {
+    fmt::print("[USpeakNative] Made by OptoCloud\n", (char*)&i);
     if (!m_opusCodec->init()) {
         throw std::exception("Failed to initialize codec!");
     }
