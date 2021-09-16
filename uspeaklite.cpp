@@ -16,13 +16,13 @@ constexpr void SetPacketId(std::span<std::uint8_t> packet, std::uint8_t packetId
     packet[2] = 0;
     packet[3] = 0;
 }
-constexpr std::uint8_t GetPacketId(std::span<const std::uint8_t> packet) {
+constexpr std::uint8_t GetPacketSenderId(std::span<const std::uint8_t> packet) {
     return packet[0];
 }
 constexpr void SetPacketTime(std::span<std::uint8_t> packet, std::int32_t packetTime) {
    *((std::int32_t*)(packet.data() + 4)) = packetTime;
 }
-constexpr std::int32_t GetPacketTime(std::span<const std::uint8_t> packet) {
+constexpr std::int32_t GetPacketServerTime(std::span<const std::uint8_t> packet) {
     return *((std::int32_t*)(packet.data() + 4));
 }
 
@@ -63,7 +63,7 @@ USpeakNative::OpusCodec::BandMode USpeakNative::USpeakLite::bandMode() const
     return m_bandMode;
 }
 
-std::vector<std::uint8_t> USpeakNative::USpeakLite::getAudioFrame(std::int32_t packetTime)
+std::vector<std::uint8_t> USpeakNative::USpeakLite::getAudioFrame(std::uint8_t senderId, std::int32_t packetTime)
 {
     USpeakNative::Internal::ScopedSpinLock l(m_lock);
 
@@ -79,16 +79,15 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::getAudioFrame(std::int32_t p
     for (int i = 0; i < 3; i++) {
         USpeakFrameContainer& frame = m_frameQueue.front();
 
-        auto frameData = frame.encode();
+        auto frameData = frame.encodedData();
 
         buffer.insert(buffer.end(), frameData.begin(), frameData.end());
 
         m_frameQueue.pop_front();
     }
 
+    SetPacketId(buffer, senderId);
     SetPacketTime(buffer, packetTime);
-    SetPacketId(buffer, 11);
-    buffer.push_back(11);
 
     return buffer;
 }
@@ -97,11 +96,10 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<c
 {
     USpeakNative::Internal::ScopedSpinLock l(m_lock);
 
-    std::uint8_t packetid = GetPacketId(dataIn);
-    std::int32_t servertime = GetPacketTime(dataIn);
+    std::uint8_t senderId = GetPacketSenderId(dataIn);
+    std::int32_t serverTicks = GetPacketServerTime(dataIn);
 
-    fmt::print("\n[USpeakNative] Decoded packet begin:\n");
-    fmt::print("[USpeakNative] {} {} {} {}\n", dataIn[0], dataIn[1], dataIn[2], dataIn[3]);
+    fmt::print("\n[USpeakNative] Decoded packet begin: SenderId: {}\tServerTicks: {}\n", senderId, serverTicks);
     std::size_t offset = 8;
     while (offset < (dataIn.size() - 1)) {
         USpeakNative::USpeakFrameContainer container;
@@ -109,11 +107,11 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<c
             fmt::print("[USpeakNative] Failed to decode audio packet!\n");
             return {};
         }
-        fmt::print("[USpeakNative] Decoded packet with: Id: {}\tIdx: {}\tTime: {}\tSize: {}\n", packetid, container.frameIndex(), servertime, container.frameSize());
+        fmt::print("[USpeakNative] Decoded frame with: Index: {}\tSize: {}\n", container.frameIndex(), container.frameSize());
 
         offset += container.encodedSize();
     }
-    fmt::print("[USpeakNative] Decoded packet end, result: {}\nSize: {}\n", dataIn[dataIn.size() - 1], dataIn.size());
+    fmt::print("[USpeakNative] Decoded packet end\n");
 
     return std::vector<std::uint8_t>(dataIn.begin(), dataIn.end());
 }

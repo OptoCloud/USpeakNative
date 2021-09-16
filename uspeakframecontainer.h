@@ -12,15 +12,15 @@ struct USpeakFrameContainer
     USpeakFrameContainer();
     bool fromData(std::span<const std::uint8_t> data, std::uint16_t frameIndex);
     bool decode(std::span<const std::uint8_t> data, std::size_t offset);
-    std::span<const std::uint8_t> encode();
+
+    std::span<const std::uint8_t> encodedData();
+    std::span<const std::uint8_t> decodedData();
 
     std::size_t encodedSize();
 
     std::uint16_t frameSize();
     std::uint16_t frameIndex();
 private:
-    std::uint16_t m_frameSize;
-    std::uint16_t m_frameIndex;
     std::vector<std::uint8_t> m_frameData;
 };
 

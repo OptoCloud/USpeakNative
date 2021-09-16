@@ -13,9 +13,7 @@ constexpr std::uint16_t ConvertToUint16(const std::uint8_t* data, std::size_t of
 constexpr std::size_t FrameHeaderSize = sizeof(std::uint16_t) + sizeof(std::uint16_t);
 
 USpeakNative::USpeakFrameContainer::USpeakFrameContainer()
-    : m_frameSize()
-    , m_frameIndex()
-    , m_frameData()
+    : m_frameData()
 {
 }
 
@@ -25,13 +23,10 @@ bool USpeakNative::USpeakFrameContainer::fromData(std::span<const uint8_t> data,
         return false;
     }
 
-    m_frameSize = data.size();
-    m_frameIndex = frameIndex;
-
     m_frameData.resize(data.size() + FrameHeaderSize);
 
-    ConvertToBytes(data.data(), 0, m_frameIndex);
-    ConvertToBytes(data.data(), 2, m_frameSize);
+    ConvertToBytes(data.data(), 0, frameIndex);
+    ConvertToBytes(data.data(), 2, data.size());
 
     memcpy(m_frameData.data() + FrameHeaderSize, data.data(), data.size());
 
@@ -49,11 +44,7 @@ bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::uint8_t> da
         return false;
     }
 
-    // Read header
-    m_frameIndex = ConvertToUint16(actualData, 0);
-    m_frameSize =  ConvertToUint16(actualData, sizeof(std::uint16_t) );
-
-    if (actualSize < m_frameSize + FrameHeaderSize) {
+    if (actualSize < FrameHeaderSize) {
         fmt::print("Data size is less than frame header size!\n");
         m_frameData.resize(0);
         return false;
@@ -66,9 +57,14 @@ bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::uint8_t> da
     return true;
 }
 
-std::span<const std::uint8_t> USpeakNative::USpeakFrameContainer::encode()
+std::span<const std::uint8_t> USpeakNative::USpeakFrameContainer::encodedData()
 {
     return m_frameData;
+}
+
+std::span<const std::uint8_t> USpeakNative::USpeakFrameContainer::decodedData()
+{
+    return std::span<const std::uint8_t>(m_frameData.begin() + FrameHeaderSize, m_frameData.end());
 }
 
 std::size_t USpeakNative::USpeakFrameContainer::encodedSize()
@@ -78,10 +74,10 @@ std::size_t USpeakNative::USpeakFrameContainer::encodedSize()
 
 std::uint16_t USpeakNative::USpeakFrameContainer::frameSize()
 {
-    return m_frameSize;
+    return ConvertToUint16(m_frameData.data(), 2);
 }
 
 std::uint16_t USpeakNative::USpeakFrameContainer::frameIndex()
 {
-    return m_frameIndex;
+    return ConvertToUint16(m_frameData.data(), 0);
 }
