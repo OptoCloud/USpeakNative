@@ -139,7 +139,7 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<c
 
         nqr::AudioData data;
         data.channelCount = 1;
-        data.sampleRate = 48000;
+        data.sampleRate = 24000;
         data.sourceFormat = nqr::PCM_FLT;
         data.lengthSeconds = dur;
         data.frameSize = 32;
@@ -150,7 +150,7 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<c
         params.targetFormat = nqr::PCM_FLT;
         params.dither = nqr::DITHER_NONE;
 
-        nqr::encode_opus_to_disk(params, &data, fmt::format("test-{}-{}.wav", senderId, it->second.sampleIndex++));
+        nqr::encode_opus_to_disk(params, &data, fmt::format("test-{}-{}.ogg", senderId, it->second.sampleIndex++));
 
         it->second.framesToSave.resize(0);
     }
