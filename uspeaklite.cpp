@@ -10,21 +10,28 @@
 
 constexpr std::size_t USPEAK_BUFFERSIZE = 1022;
 
-constexpr void SetPacketId(std::span<std::uint8_t> packet, std::uint8_t packetId) {
-    packet[0] = packetId;
-    packet[1] = 0;
-    packet[2] = 0;
-    packet[3] = 0;
+constexpr void SetPacketId(std::span<std::uint8_t> packet, std::uint32_t packetId) {
+    *((std::int32_t*)(packet.data() + 0)) = packetId;
 }
-constexpr std::uint8_t GetPacketSenderId(std::span<const std::uint8_t> packet) {
-    return packet[0];
+constexpr std::uint32_t GetPacketSenderId(std::span<const std::uint8_t> packet) {
+    return *((std::int32_t*)(packet.data() + 0));
 }
-constexpr void SetPacketTime(std::span<std::uint8_t> packet, std::int32_t packetTime) {
+constexpr void SetPacketServerTime(std::span<std::uint8_t> packet, std::uint32_t packetTime) {
    *((std::int32_t*)(packet.data() + 4)) = packetTime;
 }
-constexpr std::int32_t GetPacketServerTime(std::span<const std::uint8_t> packet) {
+constexpr std::uint32_t GetPacketServerTime(std::span<const std::uint8_t> packet) {
     return *((std::int32_t*)(packet.data() + 4));
 }
+
+struct PlayerData {
+    int sampleIndex;
+    std::uint32_t startTicks;
+    std::vector<float> framesToSave;
+};
+
+#include <mutex>
+std::mutex uspeakPlayersLock;
+std::unordered_map<std::uint8_t, PlayerData> uspeakPlayers;
 
 USpeakNative::USpeakLite::USpeakLite()
     : m_run(true)
@@ -37,7 +44,7 @@ USpeakNative::USpeakLite::USpeakLite()
     , m_recFreq(USpeakNative::OpusCodec::BandModeFrequency(m_bandMode))
     , m_ind(0)
 {
-    fmt::print("[USpeakNative] Made by OptoCloud\n", (char*)&i);
+    fmt::print("[USpeakNative] Made by OptoCloud\n");
     if (!m_opusCodec->init()) {
         throw std::exception("Failed to initialize codec!");
     }
@@ -64,7 +71,7 @@ USpeakNative::OpusCodec::BandMode USpeakNative::USpeakLite::bandMode() const
     return m_bandMode;
 }
 
-std::vector<std::uint8_t> USpeakNative::USpeakLite::getAudioFrame(std::uint8_t senderId, std::int32_t packetTime)
+std::vector<std::uint8_t> USpeakNative::USpeakLite::getAudioFrame(std::uint32_t actorNr, std::uint32_t packetTime)
 {
     USpeakNative::Internal::ScopedSpinLock l(m_lock);
 
@@ -87,32 +94,65 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::getAudioFrame(std::uint8_t s
         m_frameQueue.pop_front();
     }
 
-    SetPacketId(buffer, senderId);
-    SetPacketTime(buffer, packetTime);
+    SetPacketId(buffer, actorNr);
+    SetPacketServerTime(buffer, packetTime);
 
     return buffer;
 }
 
 std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::uint8_t> dataIn)
 {
-    USpeakNative::Internal::ScopedSpinLock l(m_lock);
+    std::uint32_t senderId = GetPacketSenderId(dataIn);
+    std::uint32_t serverTicks = GetPacketServerTime(dataIn);
 
-    std::uint8_t senderId = GetPacketSenderId(dataIn);
-    std::int32_t serverTicks = GetPacketServerTime(dataIn);
+    std::scoped_lock l(uspeakPlayersLock);
+    auto it = uspeakPlayers.find(senderId);
+    if (it == uspeakPlayers.end()) {
+        fmt::print("[USpeakNative] Recording: uSpeaker[{}]\n", senderId);
+        PlayerData data;
+        data.sampleIndex = 0;
+        data.startTicks = serverTicks;
+        data.framesToSave.reserve(512000);
+        it = uspeakPlayers.emplace(senderId, std::move(data)).first;
+    }
 
-    fmt::print("\n[USpeakNative] Decoded packet begin: SenderId: {}\tServerTicks: {}\n", senderId, serverTicks);
     std::size_t offset = 8;
-    while (offset < (dataIn.size() - 1)) {
+    while (offset < dataIn.size()) {
         USpeakNative::USpeakFrameContainer container;
         if (!container.decode(dataIn, offset)) {
             fmt::print("[USpeakNative] Failed to decode audio packet!\n");
             return {};
         }
-        fmt::print("[USpeakNative] Decoded frame with: Index: {}\tSize: {}\n", container.frameIndex(), container.frameSize());
+
+        auto hmm = m_opusCodec->decodeFloat(container.decodedData(), USpeakNative::OpusCodec::BandMode::Opus48k);
 
         offset += container.encodedSize();
+
+        it->second.framesToSave.insert(it->second.framesToSave.end(), hmm.begin(), hmm.end());
     }
-    fmt::print("[USpeakNative] Decoded packet end\n");
+
+    if (it->second.framesToSave.size() >= 500000) {
+        auto dur = (double)(serverTicks - it->second.startTicks) / 1000.;
+        it->second.startTicks = serverTicks;
+
+        fmt::print("[USpeakNative] Saving {} seconds from uSpeaker[{}]\n", dur, senderId);
+
+        nqr::AudioData data;
+        data.channelCount = 1;
+        data.sampleRate = 16000;
+        data.lengthSeconds = dur;
+        data.frameSize = 1 * 8;
+        data.samples = it->second.framesToSave;
+        data.sourceFormat = nqr::PCM_FLT;
+
+        nqr::EncoderParams params;
+        params.channelCount = 1;
+        params.targetFormat = nqr::PCM_FLT;
+
+        nqr::encode_wav_to_disk(params, &data, fmt::format("test-{}-{}.wav", senderId, it->second.sampleIndex++));
+
+        it->second.framesToSave.resize(0);
+    }
 
     return std::vector<std::uint8_t>(dataIn.begin(), dataIn.end());
 }

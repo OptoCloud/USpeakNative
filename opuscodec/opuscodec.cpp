@@ -53,23 +53,6 @@ bool USpeakNative::OpusCodec::OpusCodec::init()
         destroyCodecs();
         return false;
     }
-    /*
-    err = opus_decoder_ctl(m_decoder, OPUS_SET_BITRATE(m_bitrate));
-    if (err != OPUS_OK) {
-        destroyCodecs();
-        return false;
-    }
-    err = opus_decoder_ctl(m_decoder, OPUS_SET_INBAND_FEC(false));
-    if (err != OPUS_OK) {
-        destroyCodecs();
-        return false;
-    }
-    err = opus_decoder_ctl(m_decoder, OPUS_SET_PACKET_LOSS_PERC(0));
-    if (err != OPUS_OK) {
-        destroyCodecs();
-        return false;
-    }
-    */
 
     return true;
 }
