@@ -102,9 +102,11 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::getAudioFrame(std::uint32_t 
 
 std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::uint8_t> dataIn)
 {
+    // Get packet senderId and serverTicks for sender
     std::uint32_t senderId = GetPacketSenderId(dataIn);
     std::uint32_t serverTicks = GetPacketServerTime(dataIn);
 
+    // Get or create a uspeakplayer object to hold audio data from this player
     std::scoped_lock l(uspeakPlayersLock);
     auto it = uspeakPlayers.find(senderId);
     if (it == uspeakPlayers.end()) {
@@ -116,6 +118,7 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<c
         it = uspeakPlayers.emplace(senderId, std::move(data)).first;
     }
 
+    // Get all the audio packets, and decode them into float32 samples
     std::size_t offset = 8;
     while (offset < dataIn.size()) {
         USpeakNative::USpeakFrameContainer container;
@@ -131,26 +134,25 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<c
         it->second.framesToSave.insert(it->second.framesToSave.end(), hmm.begin(), hmm.end());
     }
 
+    // If buffer has been filled, encode and save the audio data
     if (it->second.framesToSave.size() >= 500000) {
+
+        // Server ticks are in ms so just calculate the time elapsed by getting the diff / 1000
         auto dur = (double)(serverTicks - it->second.startTicks) / 1000.;
         it->second.startTicks = serverTicks;
 
         fmt::print("[USpeakNative] Saving {} seconds from uSpeaker[{}]\n", dur, senderId);
 
         nqr::AudioData data;
-        data.channelCount = 1;
-        data.sampleRate = 24000;
-        data.sourceFormat = nqr::PCM_FLT;
-        data.lengthSeconds = dur;
-        data.frameSize = 32;
-        data.samples = it->second.framesToSave;
+        data.channelCount = 1;            // Single channel
+        data.sampleRate = 24000;          // 24k bitrate
+        data.sourceFormat = nqr::PCM_FLT; // PulseCodeModulation_FLoaT
+        data.lengthSeconds = dur;         // amount of seconds elapsed
+        data.frameSize = 32;              // bits per sample
+        data.samples = it->second.framesToSave; // audio data
 
-        nqr::EncoderParams params;
-        params.channelCount = 1;
-        params.targetFormat = nqr::PCM_FLT;
-        params.dither = nqr::DITHER_NONE;
-
-        nqr::encode_opus_to_disk(params, &data, fmt::format("test-{}-{}.ogg", senderId, it->second.sampleIndex++));
+        // Encode and save to ogg files
+        nqr::encode_opus_to_disk({ 1, nqr::PCM_FLT, nqr::DITHER_NONE }, &data, fmt::format("test-{}-{}.ogg", senderId, it->second.sampleIndex++));
 
         it->second.framesToSave.resize(0);
     }
