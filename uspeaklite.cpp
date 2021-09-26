@@ -10,17 +10,17 @@
 
 constexpr std::size_t USPEAK_BUFFERSIZE = 1022;
 
-constexpr void SetPacketId(std::span<std::uint8_t> packet, std::uint32_t packetId) {
-    *((std::uint32_t*)(packet.data() + 0)) = packetId;
+constexpr void SetPacketId(std::span<std::uint8_t> packet, std::int32_t packetId) {
+    *((std::int32_t*)(packet.data() + 0)) = packetId;
 }
-constexpr std::uint32_t GetPacketSenderId(std::span<const std::uint8_t> packet) {
-    return *((std::uint32_t*)(packet.data() + 0));
+constexpr std::int32_t GetPacketSenderId(std::span<const std::uint8_t> packet) {
+    return *((std::int32_t*)(packet.data() + 0));
 }
-constexpr void SetPacketServerTime(std::span<std::uint8_t> packet, std::uint32_t packetTime) {
-   *((std::uint32_t*)(packet.data() + 4)) = packetTime;
+constexpr void SetPacketServerTime(std::span<std::uint8_t> packet, std::int32_t packetTime) {
+   *((std::int32_t*)(packet.data() + 4)) = packetTime;
 }
-constexpr std::uint32_t GetPacketServerTime(std::span<const std::uint8_t> packet) {
-    return *((std::uint32_t*)(packet.data() + 4));
+constexpr std::int32_t GetPacketServerTime(std::span<const std::uint8_t> packet) {
+    return *((std::int32_t*)(packet.data() + 4));
 }
 
 struct PlayerData {
@@ -36,7 +36,7 @@ std::unordered_map<std::uint8_t, PlayerData> uspeakPlayers;
 USpeakNative::USpeakLite::USpeakLite()
     : m_run(true)
     , m_lock(false)
-    , m_opusCodec(std::make_shared<USpeakNative::OpusCodec::OpusCodec>())
+    , m_opusCodec(std::make_shared<USpeakNative::OpusCodec::OpusCodec>(48000, 24000, USpeakNative::OpusCodec::OpusDelay::Delay_20ms))
     , m_frameQueue()
     , m_processingThread(&USpeakNative::USpeakLite::processingLoop, this)
     , m_lastBandMode()
@@ -71,40 +71,36 @@ USpeakNative::OpusCodec::BandMode USpeakNative::USpeakLite::bandMode() const
     return m_bandMode;
 }
 
-std::vector<std::uint8_t> USpeakNative::USpeakLite::getAudioFrame(std::uint32_t actorNr, std::uint32_t packetTime)
+std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t actorNr, std::int32_t packetTime, std::span<std::uint8_t> buffer)
 {
     USpeakNative::Internal::ScopedSpinLock l(m_lock);
 
-    if (m_frameQueue.empty()) {
-        return {};
-    }
-
-    std::vector<std::uint8_t> buffer;
-    buffer.reserve(USPEAK_BUFFERSIZE);
-    buffer.resize(8);
-
-    while (m_frameQueue.size() < 3) {}
-    for (int i = 0; i < 3; i++) {
-        USpeakFrameContainer& frame = m_frameQueue.front();
-
-        auto frameData = frame.encodedData();
-
-        buffer.insert(buffer.end(), frameData.begin(), frameData.end());
-
-        m_frameQueue.pop_front();
+    if (m_frameQueue.empty() || buffer.size() < 1022) {
+        return 0;
     }
 
     SetPacketId(buffer, actorNr);
     SetPacketServerTime(buffer, packetTime);
 
-    return buffer;
+    std::size_t sizeWritten = 8;
+
+    for (int i = 0; (i < 3) && !m_frameQueue.empty(); i++) {
+        const auto& frameData = m_frameQueue.front().encodedData();
+
+        memcpy(buffer.data() + sizeWritten, frameData.data(), frameData.size());
+        sizeWritten += frameData.size();
+
+        m_frameQueue.pop_front();
+    }
+
+    return sizeWritten;
 }
 
 std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::uint8_t> dataIn)
 {
     // Get packet senderId and serverTicks for sender
-    std::uint32_t senderId = GetPacketSenderId(dataIn);
-    std::uint32_t serverTicks = GetPacketServerTime(dataIn);
+    std::int32_t senderId = GetPacketSenderId(dataIn);
+    std::int32_t serverTicks = GetPacketServerTime(dataIn);
 
     // Get or create a uspeakplayer object to hold audio data from this player
     std::scoped_lock l(uspeakPlayersLock);
@@ -177,41 +173,50 @@ bool USpeakNative::USpeakLite::streamFile(std::string_view filename)
             return false;
         }
 
+        std::vector<float> swapBuffer;
+        swapBuffer.reserve(fileData.samples.size());
+
         // Convert to mono
         if (fileData.channelCount == 2) {
             fmt::print("[USpeakNative] Converting to mono...\n");
-            std::vector<float> mono(fileData.samples.size() / 2);
+            swapBuffer.resize(fileData.samples.size() / 2);
 
-            nqr::StereoToMono(fileData.samples.data(), mono.data(), fileData.samples.size());
+            nqr::StereoToMono(fileData.samples.data(), swapBuffer.data(), fileData.samples.size());
 
-            fileData.samples = std::move(mono);
+            std::swap(fileData.samples, swapBuffer);
             fileData.channelCount = 1;
         }
 
         // Resample to 24k
         if (fileData.sampleRate != 24000) {
             fmt::print("[USpeakNative] Resampling to 24k...\n");
-            std::vector<float> resampled;
-            resampled.reserve(fileData.samples.size());
+            swapBuffer.resize(0);
 
-            USpeakNative::Resample(fileData.samples, fileData.sampleRate, resampled, 24000);
+            USpeakNative::Resample(fileData.samples, fileData.sampleRate, swapBuffer, 24000);
 
-            fileData.samples = std::move(resampled);
+            std::swap(fileData.samples, swapBuffer);
             fileData.sampleRate = 24000;
         }
 
-        std::uint16_t frameIndex = 0;
         std::size_t sampleSize = m_opusCodec->sampleSize();
+        std::uint16_t frameIndex = 0;
 
-        std::size_t i_beg = 0;
-        for (;;) {
-            if (i_beg == fileData.samples.size()) {
-                break;
-            }
-            std::size_t i_end = std::min(i_beg + sampleSize, fileData.samples.size());
+        // Make sure the number of samples is a multiple of the codec sample size
+        std::size_t nSamples = fileData.samples.size();
+        std::size_t nSamplesFrames = nSamples / sampleSize;
+        std::size_t wholeSampleFrames = nSamplesFrames * sampleSize;
+        if (wholeSampleFrames != nSamples) {
+            fileData.samples.resize(wholeSampleFrames + sampleSize);
+        }
 
-            auto itb = fileData.samples.begin() + i_beg;
-            auto ite = fileData.samples.begin() + i_end;
+        // Adjust gain to keep sound between 1 and -1, but dont clip the audio
+        fmt::print("[USpeakNative] Normalizing gain...\n");
+        NormalizeGain(fileData.samples);
+
+        // Encode
+        fmt::print("[USpeakNative] Encoding...\n");
+        for (auto itb = fileData.samples.begin(); itb != fileData.samples.end(); itb += sampleSize) {
+            auto ite = itb + sampleSize;
 
             USpeakNative::USpeakFrameContainer container;
 
@@ -220,8 +225,6 @@ bool USpeakNative::USpeakLite::streamFile(std::string_view filename)
             if (ok) {
                 m_frameQueue.push_back(std::move(container));
             }
-
-            i_beg = i_end;
         }
 
         fmt::print("[USpeakNative] Loaded!\n");

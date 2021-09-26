@@ -6,16 +6,16 @@
 #include <fmt/format.h>
 #include <opus/opus.h>
 
-USpeakNative::OpusCodec::OpusCodec::OpusCodec(int frequency, int bitrate, int delay)
+USpeakNative::OpusCodec::OpusCodec::OpusCodec(int frequency, int bitrate, USpeakNative::OpusCodec::OpusDelay delay)
     : m_encoder(nullptr)
     , m_decoder(nullptr)
     , m_app(OPUS_APPLICATION_VOIP)
     , m_frequency(frequency)
     , m_bitrate(bitrate)
-    , m_delay(delay)
-    , m_segmentFrames(delay * (frequency / 1000))
-    , m_encodeBuffer(4000, 0)
-    , m_decodeBuffer(1000, 0.f)
+    , m_delay((int)delay)
+    , m_segmentFrames((int)delay * (frequency / 1000))
+    , m_encodeBuffer()
+    , m_decodeBuffer()
 {
 }
 
@@ -57,7 +57,7 @@ bool USpeakNative::OpusCodec::OpusCodec::init()
     return true;
 }
 
-std::size_t USpeakNative::OpusCodec::OpusCodec::sampleSize()
+std::size_t USpeakNative::OpusCodec::OpusCodec::sampleSize() noexcept
 {
     return m_segmentFrames;
 }

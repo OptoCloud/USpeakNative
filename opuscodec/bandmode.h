@@ -13,7 +13,7 @@ enum class BandMode
     Opus48k = 3
 };
 
-constexpr std::string_view BandModeString(USpeakNative::OpusCodec::BandMode bandmode) {
+constexpr std::string_view BandModeString(USpeakNative::OpusCodec::BandMode bandmode) noexcept {
     using namespace std::literals;
     switch (bandmode) {
     case USpeakNative::OpusCodec::BandMode::Narrow:
@@ -28,7 +28,7 @@ constexpr std::string_view BandModeString(USpeakNative::OpusCodec::BandMode band
         return "BandMode::Unkown"sv;
     }
 }
-constexpr std::uint32_t BandModeFrequency(USpeakNative::OpusCodec::BandMode bandmode) {
+constexpr std::uint32_t BandModeFrequency(USpeakNative::OpusCodec::BandMode bandmode) noexcept {
     switch (bandmode) {
     case USpeakNative::OpusCodec::BandMode::Narrow:
         return 8000;

@@ -5,6 +5,7 @@
 #include "bandmode.h"
 
 #include <vector>
+#include <array>
 #include <span>
 
 class OpusEncoder;
@@ -15,12 +16,12 @@ namespace USpeakNative::OpusCodec {
 class OpusCodec
 {
 public:
-    OpusCodec(int frequency = 48000, int bitrate = 24000, int delay = 20);
+    OpusCodec(int frequency, int bitrate, USpeakNative::OpusCodec::OpusDelay delay);
     ~OpusCodec();
 
     bool init();
 
-    std::size_t sampleSize();
+    std::size_t sampleSize() noexcept;
     std::vector<std::uint8_t> encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode);
     std::vector<float> decodeFloat(std::span<const std::uint8_t> data, USpeakNative::OpusCodec::BandMode mode);
 private:
@@ -33,8 +34,8 @@ private:
     int m_bitrate;
     int m_delay;
     std::size_t m_segmentFrames;
-    std::vector<std::uint8_t> m_encodeBuffer;
-    std::vector<float> m_decodeBuffer;
+    std::array<std::uint8_t, 1024> m_encodeBuffer;
+    std::array<float, 4096> m_decodeBuffer;
 };
 
 }

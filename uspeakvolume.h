@@ -5,7 +5,8 @@
 
 namespace USpeakNative {
 
-void ApplyGain(std::span<float> samples, float gain);
+void ApplyGain(std::span<float> samples, float gain) noexcept;
+void NormalizeGain(std::span<float> samples) noexcept;
 
 }
 

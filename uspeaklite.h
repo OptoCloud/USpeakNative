@@ -23,7 +23,7 @@ public:
     int audioFrequency() const;
     USpeakNative::OpusCodec::BandMode bandMode() const;
 
-    std::vector<std::uint8_t> getAudioFrame(std::uint32_t senderId, std::uint32_t packetTimer);
+    std::size_t getAudioFrame(std::int32_t senderId, std::int32_t packetTimer, std::span<std::uint8_t> buffer);
     std::vector<std::uint8_t> recodeAudioFrame(std::span<const std::uint8_t> packetTimer);
     bool streamFile(std::string_view filename);
 private:
