@@ -215,16 +215,19 @@ bool USpeakNative::USpeakLite::streamFile(std::string_view filename)
 
         // Encode
         fmt::print("[USpeakNative] Encoding...\n");
-        for (auto itb = fileData.samples.begin(); itb != fileData.samples.end(); itb += sampleSize) {
-            auto ite = itb + sampleSize;
+        auto it_a = fileData.samples.begin();
+        auto it_end = fileData.samples.end();
+        while (it_a != it_end) {
+            auto it_b = it_a + sampleSize;
 
             USpeakNative::USpeakFrameContainer container;
-
-            bool ok = container.fromData(m_opusCodec->encodeFloat(std::span<float>(itb, ite), USpeakNative::OpusCodec::BandMode::Opus48k), frameIndex++);
+            bool ok = container.fromData(m_opusCodec->encodeFloat(std::span<float>(it_a, it_b), USpeakNative::OpusCodec::BandMode::Opus48k), frameIndex++);
 
             if (ok) {
                 m_frameQueue.push_back(std::move(container));
             }
+
+            it_a = it_b;
         }
 
         fmt::print("[USpeakNative] Loaded!\n");
