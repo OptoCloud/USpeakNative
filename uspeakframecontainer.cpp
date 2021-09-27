@@ -1,34 +1,39 @@
 #include "uspeakframecontainer.h"
 
+#include "helpers.h"
+
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
-
-constexpr void ConvertToBytes(const std::uint8_t* data, std::size_t offset, std::uint16_t i) {
-    *(std::uint16_t*)(data + offset) = i;
-}
-constexpr std::uint16_t ConvertToUint16(const std::uint8_t* data, std::size_t offset) {
-    return *(std::uint16_t*)(data + offset);
-}
 
 constexpr std::size_t FrameHeaderSize = sizeof(std::uint16_t) + sizeof(std::uint16_t);
 
 USpeakNative::USpeakFrameContainer::USpeakFrameContainer()
-    : m_frameData()
+    : m_data(nullptr)
+    , m_size(0)
 {
 }
 
-bool USpeakNative::USpeakFrameContainer::fromData(std::span<const uint8_t> data, std::uint16_t frameIndex)
+USpeakNative::USpeakFrameContainer::~USpeakFrameContainer()
+{
+    if (m_data != nullptr) {
+        free(m_data);
+    }
+}
+
+bool USpeakNative::USpeakFrameContainer::fromData(std::span<const std::uint8_t> data, std::uint16_t frameIndex)
 {
     if (data.size() > UINT16_MAX || data.size() == 0) {
         return false;
     }
 
-    m_frameData.resize(data.size() + FrameHeaderSize);
+    if (!resize(data.size() + FrameHeaderSize)) {
+        return false;
+    }
 
-    ConvertToBytes(m_frameData.data(), 0, frameIndex);
-    ConvertToBytes(m_frameData.data(), 2, data.size());
+    USpeakNative::Helpers::ConvertToBytes<std::uint16_t>(m_data, 0, frameIndex);
+    USpeakNative::Helpers::ConvertToBytes<std::uint16_t>(m_data, 2, data.size());
 
-    memcpy(m_frameData.data() + FrameHeaderSize, data.data(), data.size());
+    memcpy((std::uint8_t*)m_data + FrameHeaderSize, data.data(), data.size());
 
     return true;
 }
@@ -40,44 +45,83 @@ bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::uint8_t> da
 
     if (actualSize < FrameHeaderSize) {
         fmt::print("Data size less then frame header size!\n");
-        m_frameData.resize(0);
+        clear();
         return false;
     }
 
     if (actualSize < FrameHeaderSize) {
         fmt::print("Data size is less than frame header size!\n");
-        m_frameData.resize(0);
+        clear();
         return false;
     }
 
     // Read frame
-    m_frameData.resize(actualSize);
-    memcpy(m_frameData.data(), actualData, actualSize);
+    if (!resize(actualSize)) {
+        return false;
+    }
 
+    memcpy(m_data, actualData, actualSize);
     return true;
 }
 
 std::span<const std::uint8_t> USpeakNative::USpeakFrameContainer::encodedData()
 {
-    return m_frameData;
+    auto begPtr = (const std::uint8_t*)m_data;
+    auto endPtr = (const std::uint8_t*)m_data + m_size;
+
+    return std::span<const std::uint8_t>(begPtr, endPtr);
 }
 
 std::span<const std::uint8_t> USpeakNative::USpeakFrameContainer::decodedData()
 {
-    return std::span<const std::uint8_t>(m_frameData.begin() + FrameHeaderSize, m_frameData.end());
+    auto begPtr = (const std::uint8_t*)m_data + FrameHeaderSize;
+    auto endPtr = (const std::uint8_t*)m_data + m_size;
+
+    return std::span<const std::uint8_t>(begPtr, endPtr);
 }
 
 std::size_t USpeakNative::USpeakFrameContainer::encodedSize()
 {
-    return m_frameData.size();
-}
-
-std::uint16_t USpeakNative::USpeakFrameContainer::frameSize()
-{
-    return ConvertToUint16(m_frameData.data(), 2);
+    return m_size;
 }
 
 std::uint16_t USpeakNative::USpeakFrameContainer::frameIndex()
 {
-    return ConvertToUint16(m_frameData.data(), 0);
+    return USpeakNative::Helpers::ConvertFromBytes<std::uint16_t>(m_data, 0);
+}
+
+std::uint16_t USpeakNative::USpeakFrameContainer::frameSize()
+{
+    return USpeakNative::Helpers::ConvertFromBytes<std::uint16_t>(m_data, 2);
+}
+
+void USpeakNative::USpeakFrameContainer::clear()
+{
+    free(m_data);
+    m_data = nullptr;
+    m_size = 0;
+}
+
+bool USpeakNative::USpeakFrameContainer::resize(std::size_t size)
+{
+    if (size == 0) {
+        free(m_data);
+        m_size = 0;
+        return true;
+    }
+
+    void* newPtr;
+    if (m_data == nullptr) {
+        newPtr = malloc(size);
+    } else {
+        newPtr = realloc(m_data, size);
+        if (newPtr == nullptr) {
+            free(m_data);
+        }
+    }
+
+    m_data = newPtr;
+    m_size = (m_data == nullptr) ? 0 : size;
+
+    return m_data != nullptr;
 }

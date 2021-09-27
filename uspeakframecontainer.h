@@ -2,14 +2,14 @@
 #define USPEAK_USPEAKFRAMECONTAINER_H
 
 #include <span>
-#include <vector>
-#include <memory>
+#include <cstdint>
 
 namespace USpeakNative {
 
 struct USpeakFrameContainer
 {
     USpeakFrameContainer();
+    ~USpeakFrameContainer();
     bool fromData(std::span<const std::uint8_t> data, std::uint16_t frameIndex);
     bool decode(std::span<const std::uint8_t> data, std::size_t offset);
 
@@ -18,10 +18,14 @@ struct USpeakFrameContainer
 
     std::size_t encodedSize();
 
-    std::uint16_t frameSize();
     std::uint16_t frameIndex();
+    std::uint16_t frameSize();
 private:
-    std::vector<std::uint8_t> m_frameData;
+    void clear();
+    bool resize(std::size_t size);
+
+    void* m_data;
+    std::size_t m_size;
 };
 
 }
