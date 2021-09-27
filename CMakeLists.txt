@@ -20,6 +20,7 @@ set (THREADS_PREFER_PTHREAD_FLAG ON)
 find_package (Threads REQUIRED)
 
 add_library(${project} SHARED
+    helpers.h
     uspeaklite.cpp
     uspeaklite.h
     uspeaklitewrapper.cpp
