@@ -41,7 +41,9 @@ extern "C" __declspec(dllexport) std::int32_t Native_RecodeAudioFrame(USpeakNati
         return -1;
     }
 
-    auto bytes = ptr->recodeAudioFrame(std::span<std::uint8_t>((std::uint8_t*)dataIn, dataInLength));
+    std::span<std::uint8_t> dataInSpan((std::uint8_t*)dataIn, dataInLength);
+
+    auto bytes = ptr->recodeAudioFrame(dataInSpan);
 
     if (dataOutLength < (std::int32_t)bytes.size()) {
         return -1;
