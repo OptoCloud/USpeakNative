@@ -25,8 +25,8 @@ bool USpeakNative::USpeakFrameContainer::fromData(std::span<const uint8_t> data,
 
     m_frameData.resize(data.size() + FrameHeaderSize);
 
-    ConvertToBytes(data.data(), 0, frameIndex);
-    ConvertToBytes(data.data(), 2, data.size());
+    ConvertToBytes(m_frameData.data(), 0, frameIndex);
+    ConvertToBytes(m_frameData.data(), 2, data.size());
 
     memcpy(m_frameData.data() + FrameHeaderSize, data.data(), data.size());
 

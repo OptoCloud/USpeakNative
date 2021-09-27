@@ -82,7 +82,7 @@ std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t actorNr, std::i
     SetPacketId(buffer, actorNr);
     SetPacketServerTime(buffer, packetTime);
 
-    std::size_t sizeWritten = 6; // TODO: REEEEEEEEEEEEE WHAT THE FUCK
+    std::size_t sizeWritten = 8; // TODO: REEEEEEEEEEEEE WHAT THE FUCK
 
     for (int i = 0; (i < 3) && !m_frameQueue.empty(); i++) {
         const auto& frameData = m_frameQueue.front().encodedData(); // SOMEWHERE IN HERE 2 blank bytes get written
@@ -99,7 +99,7 @@ std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t actorNr, std::i
 
     fmt::print("Size of frame: {}\n", sizeWritten);
 
-    return sizeWritten + 2; // TODO: WHAT THE FUCKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
+    return sizeWritten; // TODO: WHAT THE FUCKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 }
 
 std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::uint8_t> dataIn)
