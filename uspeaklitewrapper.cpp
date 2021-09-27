@@ -25,7 +25,7 @@ extern "C" __declspec(dllexport) bool Native_StreamMp3(USpeakNative::USpeakLite*
     return ptr->streamFile(std::string_view(pathData, pathLength));
 }
 
-extern "C" __declspec(dllexport) std::int32_t Native_GetAudioFrame(USpeakNative::USpeakLite* ptr, void* data, std::int32_t dataLength, std::int32_t actorNr, std::int32_t packetTime)
+extern "C" __declspec(dllexport) std::int32_t Native_GetAudioFrame(USpeakNative::USpeakLite* ptr, void* data, std::int32_t dataLength, std::int32_t playerId, std::int32_t packetTime)
 {
     if (data == nullptr || dataLength <= 0) {
         return -1;
@@ -33,7 +33,7 @@ extern "C" __declspec(dllexport) std::int32_t Native_GetAudioFrame(USpeakNative:
 
     std::span<std::uint8_t> dataSpan((std::uint8_t*)data, dataLength);
 
-    return ptr->getAudioFrame(actorNr, packetTime, dataSpan);
+    return ptr->getAudioFrame(playerId, packetTime, dataSpan);
 }
 extern "C" __declspec(dllexport) std::int32_t Native_RecodeAudioFrame(USpeakNative::USpeakLite* ptr, void* dataIn, std::int32_t dataInLength, void* dataOut, std::int32_t dataOutLength)
 {

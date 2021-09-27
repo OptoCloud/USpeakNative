@@ -5,10 +5,12 @@
 #include "opuscodec/opuscodec.h"
 #include "opuscodec/bandmode.h"
 
-#include <deque>
+#include <span>
+#include <queue>
 #include <memory>
 #include <atomic>
 #include <thread>
+#include <cstdint>
 
 namespace USpeakNative {
 
@@ -23,7 +25,7 @@ public:
     int audioFrequency() const;
     USpeakNative::OpusCodec::BandMode bandMode() const;
 
-    std::size_t getAudioFrame(std::int32_t senderId, std::int32_t packetTimer, std::span<std::uint8_t> buffer);
+    std::size_t getAudioFrame(std::int32_t playerId, std::int32_t packetTime, std::span<std::uint8_t> buffer);
     std::vector<std::uint8_t> recodeAudioFrame(std::span<const std::uint8_t> packetTimer);
     bool streamFile(std::string_view filename);
 private:
@@ -32,7 +34,7 @@ private:
     std::atomic_bool m_run;
     std::atomic_bool m_lock;
     std::shared_ptr<OpusCodec::OpusCodec> m_opusCodec;
-    std::deque<USpeakNative::USpeakFrameContainer> m_frameQueue;
+    std::queue<USpeakFrameContainer> m_frameQueue;
     std::thread m_processingThread;
 
     USpeakNative::OpusCodec::BandMode m_lastBandMode;
