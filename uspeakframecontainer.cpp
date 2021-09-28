@@ -20,7 +20,7 @@ USpeakNative::USpeakFrameContainer::~USpeakFrameContainer()
     }
 }
 
-bool USpeakNative::USpeakFrameContainer::fromData(std::span<const std::uint8_t> data, std::uint16_t frameIndex)
+bool USpeakNative::USpeakFrameContainer::fromData(std::span<const std::byte> data, std::uint16_t frameIndex)
 {
     if (data.size() > UINT16_MAX || data.size() == 0) {
         return false;
@@ -33,14 +33,14 @@ bool USpeakNative::USpeakFrameContainer::fromData(std::span<const std::uint8_t> 
     USpeakNative::Helpers::ConvertToBytes<std::uint16_t>(m_data, 0, frameIndex);
     USpeakNative::Helpers::ConvertToBytes<std::uint16_t>(m_data, 2, data.size());
 
-    memcpy((std::uint8_t*)m_data + FrameHeaderSize, data.data(), data.size());
+    memcpy((std::byte*)m_data + FrameHeaderSize, data.data(), data.size());
 
     return true;
 }
 
-bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::uint8_t> data, std::size_t offset)
+bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::byte> data, std::size_t offset)
 {
-    const std::uint8_t* actualData = data.data() + offset;
+    const std::byte* actualData = data.data() + offset;
     std::size_t actualSize = data.size() - offset;
 
     if (actualSize < FrameHeaderSize) {
@@ -64,20 +64,20 @@ bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::uint8_t> da
     return true;
 }
 
-std::span<const std::uint8_t> USpeakNative::USpeakFrameContainer::encodedData()
+std::span<const std::byte> USpeakNative::USpeakFrameContainer::encodedData()
 {
-    auto begPtr = (const std::uint8_t*)m_data;
-    auto endPtr = (const std::uint8_t*)m_data + m_size;
+    auto begPtr = (const std::byte*)m_data;
+    auto endPtr = (const std::byte*)m_data + m_size;
 
-    return std::span<const std::uint8_t>(begPtr, endPtr);
+    return std::span<const std::byte>(begPtr, endPtr);
 }
 
-std::span<const std::uint8_t> USpeakNative::USpeakFrameContainer::decodedData()
+std::span<const std::byte> USpeakNative::USpeakFrameContainer::decodedData()
 {
-    auto begPtr = (const std::uint8_t*)m_data + FrameHeaderSize;
-    auto endPtr = (const std::uint8_t*)m_data + m_size;
+    auto begPtr = (const std::byte*)m_data + FrameHeaderSize;
+    auto endPtr = (const std::byte*)m_data + m_size;
 
-    return std::span<const std::uint8_t>(begPtr, endPtr);
+    return std::span<const std::byte>(begPtr, endPtr);
 }
 
 std::size_t USpeakNative::USpeakFrameContainer::encodedSize()

@@ -22,8 +22,8 @@ public:
     bool init();
 
     std::size_t sampleSize() noexcept;
-    std::vector<std::uint8_t> encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode);
-    std::vector<float> decodeFloat(std::span<const std::uint8_t> data, USpeakNative::OpusCodec::BandMode mode);
+    std::vector<std::byte> encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode);
+    std::vector<float> decodeFloat(std::span<const std::byte> data, USpeakNative::OpusCodec::BandMode mode);
 private:
     void destroyCodecs();
 
@@ -34,7 +34,7 @@ private:
     int m_bitrate;
     int m_delay;
     std::size_t m_segmentFrames;
-    std::array<std::uint8_t, 1024> m_encodeBuffer;
+    std::array<std::byte, 1024> m_encodeBuffer;
     std::array<float, 4096> m_decodeBuffer;
 };
 

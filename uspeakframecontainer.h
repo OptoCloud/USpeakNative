@@ -10,11 +10,11 @@ struct USpeakFrameContainer
 {
     USpeakFrameContainer();
     ~USpeakFrameContainer();
-    bool fromData(std::span<const std::uint8_t> data, std::uint16_t frameIndex);
-    bool decode(std::span<const std::uint8_t> data, std::size_t offset);
+    bool fromData(std::span<const std::byte> data, std::uint16_t frameIndex);
+    bool decode(std::span<const std::byte> data, std::size_t offset);
 
-    std::span<const std::uint8_t> encodedData();
-    std::span<const std::uint8_t> decodedData();
+    std::span<const std::byte> encodedData();
+    std::span<const std::byte> decodedData();
 
     std::size_t encodedSize();
 

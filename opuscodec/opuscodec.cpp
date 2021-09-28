@@ -62,7 +62,7 @@ std::size_t USpeakNative::OpusCodec::OpusCodec::sampleSize() noexcept
     return m_segmentFrames;
 }
 
-std::vector<std::uint8_t> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode)
+std::vector<std::byte> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode)
 {
     if (mode != USpeakNative::OpusCodec::BandMode::Opus48k) {
         fmt::print("[USpeakNative] OpusCodec: Encode: bandwidth mode must be {}! (set to {})\n",
@@ -78,7 +78,7 @@ std::vector<std::uint8_t> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::s
         return {};
     }
 
-    int num = opus_encode_float(m_encoder, samples.data(), (int)samples.size(), m_encodeBuffer.data(), (int)m_encodeBuffer.size());
+    int num = opus_encode_float(m_encoder, samples.data(), (int)samples.size(), (std::uint8_t*)m_encodeBuffer.data(), (int)m_encodeBuffer.size());
     if (num < 0) {
         fmt::print("[USpeakNative] OpusCodec: Encode failed! Opus Error_{}\n", num);
         return {};
@@ -88,10 +88,10 @@ std::vector<std::uint8_t> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::s
         return {};
     }
 
-    return std::vector<std::uint8_t>(m_encodeBuffer.begin(), m_encodeBuffer.begin() + num);
+    return std::vector<std::byte>(m_encodeBuffer.begin(), m_encodeBuffer.begin() + num);
 }
 
-std::vector<float> USpeakNative::OpusCodec::OpusCodec::decodeFloat(std::span<const std::uint8_t> data, USpeakNative::OpusCodec::BandMode mode)
+std::vector<float> USpeakNative::OpusCodec::OpusCodec::decodeFloat(std::span<const std::byte> data, USpeakNative::OpusCodec::BandMode mode)
 {
     if (mode != USpeakNative::OpusCodec::BandMode::Opus48k) {
         fmt::print("[USpeakNative] OpusCodec: Decode: bandwidth mode must be {}! (set to {})\n",
@@ -100,7 +100,7 @@ std::vector<float> USpeakNative::OpusCodec::OpusCodec::decodeFloat(std::span<con
         return {};
     }
 
-    int num = opus_decode_float(m_decoder, data.data(), (int)data.size(), m_decodeBuffer.data(), (int)m_decodeBuffer.size(), 0);
+    int num = opus_decode_float(m_decoder, (const std::uint8_t*)data.data(), (int)data.size(), m_decodeBuffer.data(), (int)m_decodeBuffer.size(), 0);
     if (num < 0) {
         fmt::print("[USpeakNative] OpusCodec: Decode failed! Opus Error_{}\n", num);
         return {};

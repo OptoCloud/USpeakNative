@@ -19,7 +19,7 @@ struct PlayerData {
 
 #include <mutex>
 std::mutex uspeakPlayersLock;
-std::unordered_map<std::uint8_t, PlayerData> uspeakPlayers;
+std::unordered_map<std::int32_t, PlayerData> uspeakPlayers;
 
 USpeakNative::USpeakLite::USpeakLite()
     : m_run(true)
@@ -59,7 +59,7 @@ USpeakNative::OpusCodec::BandMode USpeakNative::USpeakLite::bandMode() const
     return m_bandMode;
 }
 
-std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::int32_t packetTime, std::span<std::uint8_t> buffer)
+std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::int32_t packetTime, std::span<std::byte> buffer)
 {
     USpeakNative::Internal::ScopedSpinLock l(m_lock);
 
@@ -84,7 +84,7 @@ std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::
     return sizeWritten;
 }
 
-std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::uint8_t> dataIn)
+std::vector<std::byte> USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::byte> dataIn)
 {
     // Get packet playerId and packetTime from first 8 bytes
     std::int32_t playerId = USpeakNative::Helpers::ConvertFromBytes<std::int32_t>(dataIn.data(), 0);
@@ -141,7 +141,7 @@ std::vector<std::uint8_t> USpeakNative::USpeakLite::recodeAudioFrame(std::span<c
         it->second.framesToSave.resize(0);
     }
 
-    return std::vector<std::uint8_t>(dataIn.begin(), dataIn.end());
+    return std::vector<std::byte>(dataIn.begin(), dataIn.end());
 }
 
 bool USpeakNative::USpeakLite::streamFile(std::string_view filename)
