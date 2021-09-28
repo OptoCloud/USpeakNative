@@ -30,6 +30,7 @@ bool USpeakNative::USpeakFrameContainer::fromData(std::span<const std::byte> dat
 
 bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::byte> data, std::size_t offset)
 {
+    auto actualBegin = data.begin() + offset;
     std::size_t actualSize = data.size() - offset;
 
     if (actualSize < FrameHeaderSize) {
@@ -38,7 +39,7 @@ bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::byte> data,
         return false;
     }
 
-    std::uint16_t frameSize = USpeakNative::Helpers::ConvertFromBytes<std::uint16_t>(m_data.data(), 2) + FrameHeaderSize;
+    std::uint16_t frameSize = USpeakNative::Helpers::ConvertFromBytes<std::uint16_t>(data.data(), 2) + FrameHeaderSize;
     if (frameSize > actualSize) {
         fmt::print("Header size invalid! (exceeds size of data)\n");
         m_data.clear();
@@ -47,7 +48,7 @@ bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::byte> data,
 
     // Read frame
     m_data.resize(frameSize);
-    std::copy(data.begin() + offset, data.begin() + frameSize, m_data.begin());
+    std::copy(actualBegin, actualBegin + frameSize, m_data.begin());
 
     return true;
 }
