@@ -112,12 +112,8 @@ std::vector<std::byte> USpeakNative::USpeakLite::recodeAudioFrame(std::span<cons
 
     // Get all the audio packets, and decode them into float32 samples
     std::size_t offset = 8;
-    while (offset < dataIn.size()) {
-        USpeakNative::USpeakFrameContainer container;
-        if (!container.decode(dataIn, offset)) {
-            fmt::print("[USpeakNative] Failed to decode audio packet!\n");
-            return {};
-        }
+    USpeakNative::USpeakFrameContainer container;
+    while (container.decode(dataIn, offset)) {
 
         auto hmm = m_opusCodec->decodeFloat(container.decodedData(), USpeakNative::OpusCodec::BandMode::Opus48k);
 
