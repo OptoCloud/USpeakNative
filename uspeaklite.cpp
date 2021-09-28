@@ -72,13 +72,21 @@ std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::
 
     std::size_t sizeWritten = 8;
 
-    for (int i = 0; (i < 3) && !m_frameQueue.empty(); i++) {
-        auto frameData = m_frameQueue.front().encodedData();
+    for (int i = 0; i < 3; i++) {
+        std::span<const std::byte> frameData = m_frameQueue.front().encodedData();
+
+        if (sizeWritten + frameData.size() > buffer.size()) {
+            break;
+        }
 
         memcpy(buffer.data() + sizeWritten, frameData.data(), frameData.size());
         sizeWritten += frameData.size();
 
         m_frameQueue.pop();
+
+        if (m_frameQueue.empty()) {
+            break;
+        }
     }
 
     return sizeWritten;
@@ -113,7 +121,7 @@ std::vector<std::byte> USpeakNative::USpeakLite::recodeAudioFrame(std::span<cons
 
         auto hmm = m_opusCodec->decodeFloat(container.decodedData(), USpeakNative::OpusCodec::BandMode::Opus48k);
 
-        offset += container.encodedSize();
+        offset += container.encodedData().size();
 
         it->second.framesToSave.insert(it->second.framesToSave.end(), hmm.begin(), hmm.end());
     }
