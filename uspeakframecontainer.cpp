@@ -5,7 +5,7 @@
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
-constexpr std::size_t FrameHeaderSize = sizeof(std::uint16_t) + sizeof(std::uint16_t);
+constexpr std::size_t USPEAKFRAME_HEADERSIZE = sizeof(std::uint16_t) + sizeof(std::uint16_t);
 
 USpeakNative::USpeakFrameContainer::USpeakFrameContainer()
     : m_data()
@@ -18,7 +18,7 @@ bool USpeakNative::USpeakFrameContainer::fromData(std::span<const std::byte> dat
         return false;
     }
 
-    m_data.resize(data.size() + FrameHeaderSize);
+    m_data.resize(data.size() + USPEAKFRAME_HEADERSIZE);
 
     USpeakNative::Helpers::ConvertToBytes<std::uint16_t>(m_data.data(), 0, frameIndex);
     USpeakNative::Helpers::ConvertToBytes<std::uint16_t>(m_data.data(), 2, (std::uint16_t)data.size());
@@ -33,22 +33,24 @@ bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::byte> data,
     auto actualBegin = data.begin() + offset;
     std::size_t actualSize = data.size() - offset;
 
-    if (actualSize < FrameHeaderSize) {
+    if (actualSize < USPEAKFRAME_HEADERSIZE) {
         fmt::print("Data size less then frame header size!\n");
         m_data.clear();
         return false;
     }
 
-    std::uint16_t frameSize = USpeakNative::Helpers::ConvertFromBytes<std::uint16_t>(data.data(), 2) + FrameHeaderSize;
+    std::uint16_t frameSize = USpeakNative::Helpers::ConvertFromBytes<std::uint16_t>(data.data(), offset + 2) + USPEAKFRAME_HEADERSIZE;
     if (frameSize > actualSize) {
         fmt::print("Header size invalid! (exceeds size of data)\n");
         m_data.clear();
         return false;
     }
 
+    auto actualEnd = actualBegin + frameSize;
+
     // Read frame
     m_data.resize(frameSize);
-    std::copy(actualBegin, actualBegin + frameSize, m_data.begin());
+    std::copy(actualBegin, actualEnd, m_data.begin());
 
     return true;
 }
@@ -60,11 +62,11 @@ std::span<const std::byte> USpeakNative::USpeakFrameContainer::encodedData() con
 
 std::span<const std::byte> USpeakNative::USpeakFrameContainer::decodedData() const
 {
-    if (m_data.size() <= FrameHeaderSize) {
+    if (m_data.size() <= USPEAKFRAME_HEADERSIZE) {
         return {};
     }
 
-    return std::span<const std::byte>(m_data.begin() + FrameHeaderSize, m_data.end());
+    return std::span<const std::byte>(m_data.begin() + USPEAKFRAME_HEADERSIZE, m_data.end());
 }
 
 std::uint16_t USpeakNative::USpeakFrameContainer::frameIndex() const

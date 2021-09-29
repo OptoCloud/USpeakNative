@@ -9,6 +9,7 @@
 #include "libnyquist/Encoders.h"
 #include "internal/scopedspinlock.h"
 
+constexpr std::size_t USPEAK_HEADERSIZE = sizeof(std::int32_t) + sizeof(std::int32_t);
 constexpr std::size_t USPEAK_BUFFERSIZE = 1022;
 
 struct PlayerData {
@@ -94,6 +95,11 @@ std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::
 
 std::vector<std::byte> USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::byte> dataIn)
 {
+    if (dataIn.size() <= USPEAK_HEADERSIZE) {
+        fmt::print("[USpeakNative] Audioframe too small!\n");
+        return {};
+    }
+
     // Get packet playerId and packetTime from first 8 bytes
     std::int32_t playerId = USpeakNative::Helpers::ConvertFromBytes<std::int32_t>(dataIn.data(), 0);
     std::int32_t packetTime = USpeakNative::Helpers::ConvertFromBytes<std::int32_t>(dataIn.data(), 4);
@@ -111,7 +117,7 @@ std::vector<std::byte> USpeakNative::USpeakLite::recodeAudioFrame(std::span<cons
     }
 
     // Get all the audio packets, and decode them into float32 samples
-    std::size_t offset = 8;
+    std::size_t offset = USPEAK_HEADERSIZE;
     USpeakNative::USpeakFrameContainer container;
     while (container.decode(dataIn, offset)) {
 

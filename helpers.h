@@ -6,20 +6,23 @@
 
 namespace USpeakNative::Helpers {
 
+constexpr void* AddOffset(void* ptr, std::size_t offset) {
+    return (std::byte*)ptr + offset;
+}
+constexpr const void* AddOffset(const void* ptr, std::size_t offset) {
+    return (std::byte*)ptr + offset;
+}
+
 template <typename T>
 constexpr void ConvertToBytes(const void* data, std::size_t offset, T i) {
     static_assert(std::is_integral<T>());
-    auto offsetData = (const std::uint8_t*)data + offset;
-    auto typeAddress = (T*)offsetData;
-    *typeAddress = i;
+    *(T*)AddOffset(data, offset) = i;
 }
 
 template <typename T>
 constexpr T ConvertFromBytes(const void* data, std::size_t offset) {
     static_assert(std::is_integral<T>());
-    auto offsetData = (const std::uint8_t*)data + offset;
-    auto typeAddress = (T*)offsetData;
-    return *typeAddress;
+    return *(T*)AddOffset(data, offset);
 }
 
 }
