@@ -23,7 +23,7 @@ bool USpeakNative::USpeakFrameContainer::fromData(std::span<const std::byte> dat
     USpeakNative::Helpers::ConvertToBytes<std::uint16_t>(m_data.data(), 0, frameIndex);
     USpeakNative::Helpers::ConvertToBytes<std::uint16_t>(m_data.data(), 2, (std::uint16_t)data.size());
 
-    std::copy(data.begin(), data.end(), m_data.begin());
+    std::copy(data.begin(), data.end(), m_data.begin() + USPEAKFRAME_HEADERSIZE);
 
     return true;
 }
