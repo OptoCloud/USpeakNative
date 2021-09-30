@@ -22,8 +22,8 @@ public:
     bool init();
 
     std::size_t sampleSize() noexcept;
-    std::vector<std::byte> encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode);
-    std::vector<float> decodeFloat(std::span<const std::byte> data, USpeakNative::OpusCodec::BandMode mode);
+    std::span<const std::byte> encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode);
+    std::span<const float> decodeFloat(std::span<const std::byte> data, USpeakNative::OpusCodec::BandMode mode);
 private:
     void destroyCodecs();
 

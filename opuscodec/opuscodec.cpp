@@ -62,7 +62,7 @@ std::size_t USpeakNative::OpusCodec::OpusCodec::sampleSize() noexcept
     return m_segmentFrames;
 }
 
-std::vector<std::byte> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode)
+std::span<const std::byte> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode)
 {
     if (mode != USpeakNative::OpusCodec::BandMode::Opus48k) {
         fmt::print("[USpeakNative] OpusCodec: Encode: bandwidth mode must be {}! (set to {})\n",
@@ -88,10 +88,10 @@ std::vector<std::byte> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::span
         return {};
     }
 
-    return std::vector<std::byte>(m_encodeBuffer.begin(), m_encodeBuffer.begin() + num);
+    return std::span<const std::byte>(m_encodeBuffer.begin(), m_encodeBuffer.begin() + num);
 }
 
-std::vector<float> USpeakNative::OpusCodec::OpusCodec::decodeFloat(std::span<const std::byte> data, USpeakNative::OpusCodec::BandMode mode)
+std::span<const float> USpeakNative::OpusCodec::OpusCodec::decodeFloat(std::span<const std::byte> data, USpeakNative::OpusCodec::BandMode mode)
 {
     if (mode != USpeakNative::OpusCodec::BandMode::Opus48k) {
         fmt::print("[USpeakNative] OpusCodec: Decode: bandwidth mode must be {}! (set to {})\n",
@@ -110,7 +110,7 @@ std::vector<float> USpeakNative::OpusCodec::OpusCodec::decodeFloat(std::span<con
         return {};
     }
 
-    return std::vector<float>(m_decodeBuffer.begin(), m_decodeBuffer.begin() + num);
+    return std::span<const float>(m_decodeBuffer.begin(), m_decodeBuffer.begin() + num);
 }
 
 void USpeakNative::OpusCodec::OpusCodec::destroyCodecs()

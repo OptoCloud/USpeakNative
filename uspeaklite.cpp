@@ -126,9 +126,6 @@ std::vector<std::byte> USpeakNative::USpeakLite::recodeAudioFrame(std::span<cons
 
         auto hmm = m_opusCodec->decodeFloat(container.decodedData(), USpeakNative::OpusCodec::BandMode::Opus48k);
 
-        // Limit to +/- 1.0
-        USpeakNative::ApplyGain(hmm, 1.f);
-
         offset += container.encodedData().size();
 
         it->second.framesToSave.insert(it->second.framesToSave.end(), hmm.begin(), hmm.end());
@@ -136,6 +133,8 @@ std::vector<std::byte> USpeakNative::USpeakLite::recodeAudioFrame(std::span<cons
 
     // If buffer has been filled, encode and save the audio data
     if (it->second.framesToSave.size() >= 500000) {
+        // Limit to +/- 1.0
+        USpeakNative::ApplyGain(it->second.framesToSave, 1.f);
 
         // Server ticks are in ms so just calculate the time elapsed by getting the diff / 1000
         auto dur = (double)(packetTime - it->second.startTime) / 1000.;
