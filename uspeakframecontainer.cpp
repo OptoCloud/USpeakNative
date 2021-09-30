@@ -34,14 +34,14 @@ bool USpeakNative::USpeakFrameContainer::decode(std::span<const std::byte> data,
     std::size_t actualSize = data.size() - offset;
 
     if (actualSize < USPEAKFRAME_HEADERSIZE) {
-        fmt::print("Data size less then frame header size!\n");
+        fmt::print("[USpeakNative] Data size less then frame header size!\n");
         m_data.clear();
         return false;
     }
 
     std::uint16_t frameSize = USpeakNative::Helpers::ConvertFromBytes<std::uint16_t>(data.data(), offset + 2) + USPEAKFRAME_HEADERSIZE;
     if (frameSize > actualSize) {
-        fmt::print("Header size invalid! (exceeds size of data)\n");
+        fmt::print("[USpeakNative] Header size invalid! (exceeds size of data)\n");
         m_data.clear();
         return false;
     }
