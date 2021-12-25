@@ -4,7 +4,7 @@
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
-#include <opus/opus.h>
+#include <opus.h>
 
 USpeakNative::OpusCodec::OpusCodec::OpusCodec(int frequency, int bitrate, USpeakNative::OpusCodec::OpusDelay delay)
     : m_encoder(nullptr)

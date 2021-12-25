@@ -42,14 +42,13 @@ extern "C" __declspec(dllexport) std::int32_t Native_RecodeAudioFrame(USpeakNati
     }
 
     std::span<std::byte> dataInSpan(dataInPtr, dataInLength);
+    std::span<std::byte> bufferSpan(bufferPtr, bufferLength);
 
-    auto bytes = ptr->recodeAudioFrame(dataInSpan);
+    std::size_t bytesWritten = ptr->recodeAudioFrame(dataInSpan, bufferSpan);
 
-    if (bufferLength < (std::int32_t)bytes.size()) {
+    if (bytesWritten == 0) {
         return -1;
     }
 
-    memcpy(bufferPtr, bytes.data(), bytes.size());
-
-    return bytes.size();
+    return bytesWritten;
 }

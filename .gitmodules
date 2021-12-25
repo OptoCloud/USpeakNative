@@ -1,6 +1,9 @@
 [submodule "libnyquist"]
-	path = libnyquist
+	path = external/libnyquist
 	url = https://github.com/ddiakopoulos/libnyquist.git
 [submodule "fmt"]
-	path = fmt
+	path = external/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "opus"]
+	path = external/opus
+	url = https://github.com/xiph/opus.git

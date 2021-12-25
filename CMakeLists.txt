@@ -12,9 +12,9 @@ else ()
     set (CMAKE_CXX_FLAGS " /MDd /DEBUG:FULL /Od /Ob0 /Wall")
 endif ()
 
-add_subdirectory(fmt)
-add_subdirectory(libnyquist)
-find_package (Opus REQUIRED CONFIG)
+add_subdirectory(external/fmt)
+add_subdirectory(external/opus)
+add_subdirectory(external/libnyquist)
 
 set (THREADS_PREFER_PTHREAD_FLAG ON)
 find_package (Threads REQUIRED)
@@ -42,14 +42,15 @@ add_library(${project} SHARED
 )
 
 target_include_directories(${project} PRIVATE
-    ${FMT_INCLUDE_DIRS}
-    ${OPUS_INCLUDE_DIRS}
-    ${LIBNYQUIST_INCLUDE_DIRS}
+    external/libnyquist/include
+    external/opus/include
+    external/fmt/include
 )
 
 target_link_libraries(${project} PRIVATE
     ${CMAKE_DL_LIBS}
     Threads::Threads
+    # Opus::opus # Libnyquist already links against opus
     fmt::fmt
     libnyquist
 )
