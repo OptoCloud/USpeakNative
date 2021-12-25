@@ -19,11 +19,10 @@ add_subdirectory(external/libnyquist)
 set (THREADS_PREFER_PTHREAD_FLAG ON)
 find_package (Threads REQUIRED)
 
-add_library(${project} SHARED
+add_library(${project} STATIC
     helpers.h
     uspeaklite.cpp
     uspeaklite.h
-    uspeaklitewrapper.cpp
     uspeakframecontainer.cpp
     uspeakframecontainer.h
     uspeakvolume.cpp
