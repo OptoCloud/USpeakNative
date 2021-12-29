@@ -89,7 +89,7 @@ std::size_t USpeakNative::USpeakLite::encodePacket(const USpeakPacket& packet, s
     std::uint16_t frameIndex = 0;
 
     // Make sure the number of samples is a multiple of the codec sample size
-    std::size_t nSamples = packet.pcmSamples.size();
+    std::size_t nSamples = packet.audioSamples.size();
     std::size_t nSamplesFrames = nSamples / sampleSize;
     std::size_t wholeSampleFrames = nSamplesFrames * sampleSize;
     if (wholeSampleFrames != nSamples) {
@@ -108,8 +108,8 @@ std::size_t USpeakNative::USpeakLite::encodePacket(const USpeakPacket& packet, s
     USpeakNative::USpeakFrameContainer container;
 
     // Encode
-    auto it_a = packet.pcmSamples.begin();
-    auto it_end = packet.pcmSamples.end();
+    auto it_a = packet.audioSamples.begin();
+    auto it_end = packet.audioSamples.end();
     while (it_a != it_end) {
         auto it_b = it_a + sampleSize;
 
@@ -135,7 +135,7 @@ bool USpeakNative::USpeakLite::decodePacket(std::span<const std::byte> dataIn, U
     // Copy over header
     packetOut.playerId = USpeakNative::Helpers::ConvertFromBytes<std::int32_t>(dataIn.data(), 0);
     packetOut.packetTime = USpeakNative::Helpers::ConvertFromBytes<std::uint32_t>(dataIn.data(), 4);
-    packetOut.pcmSamples.clear();
+    packetOut.audioSamples.clear();
 
     // Get all the audio packets, and decode them into float32 samples
     std::size_t sizeRead = USPEAK_HEADERSIZE;
@@ -152,7 +152,7 @@ bool USpeakNative::USpeakLite::decodePacket(std::span<const std::byte> dataIn, U
         sizeRead += container.encodedData().size();
 
         if (hmm.size() > 0) {
-            packetOut.pcmSamples.insert(packetOut.pcmSamples.end(), hmm.begin(), hmm.end());
+            packetOut.audioSamples.insert(packetOut.audioSamples.end(), hmm.begin(), hmm.end());
         }
     }
 

@@ -10,9 +10,6 @@
 void InsertAudio(std::vector<float>& target, std::uint32_t posMs, std::span<const float> source) {
     std::uint32_t targetIndex = posMs * 48;
 
-    printf("Insert:\t%iu\n", posMs);
-    fflush(stdout);
-
     std::size_t requiredSpace = targetIndex + source.size();
     if (target.size() < requiredSpace) {
         target.resize(requiredSpace);
@@ -42,6 +39,8 @@ int main(int argc, char**argv) {
     std::vector<std::byte> rawData;
     std::vector<USpeakNative::USpeakPacket> packets;
 
+    std::int32_t firstId = 0;
+
     auto json = nlohmann::json::parse(ifs);
     for (const auto& entry : json) {
         if (entry["patch_name"] != "OnEventPatch") continue;
@@ -63,6 +62,11 @@ int main(int argc, char**argv) {
             printf("Decoding error!\n");
         }
 
+        if (firstId == 0) {
+            firstId = packet.playerId;
+            printf("PlayerID: %i\n", firstId);
+        } else if (packet.playerId != firstId) continue;
+
         if (packet.packetTime < startMs) {
             startMs = packet.packetTime;
         } else if (packet.packetTime > endMs) {
@@ -72,22 +76,19 @@ int main(int argc, char**argv) {
         packets.push_back(std::move(packet));
     }
 
-    printf("Start:\t%iu\nEnd:\t%iu\n", startMs, endMs);
-    fflush(stdout);
-
     nqr::AudioData data;
     data.samples.reserve(5000000);
 
     for (const auto& packet : packets) {
-        InsertAudio(data.samples, packet.packetTime - startMs, packet.pcmSamples);
+        InsertAudio(data.samples, packet.packetTime - startMs, packet.audioSamples);
     }
 
     nqr::EncoderParams params;
-    params.channelCount = 2;
+    params.channelCount = 1;
     params.dither = nqr::DitherType::DITHER_NONE;
     params.targetFormat = nqr::PCMFormat::PCM_FLT;
 
-    data.channelCount = 2;
+    data.channelCount = 1;
     data.lengthSeconds = (float)(endMs - startMs) / 1000.f;
     data.sampleRate = 48000;
     data.sourceFormat = nqr::PCMFormat::PCM_FLT;
