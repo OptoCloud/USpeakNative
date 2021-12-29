@@ -9,13 +9,13 @@
 #include "libnyquist/Encoders.h"
 #include "internal/scopedspinlock.h"
 
-constexpr std::size_t USPEAK_HEADERSIZE = sizeof(std::int32_t) + sizeof(std::int32_t);
+constexpr std::size_t USPEAK_HEADERSIZE = sizeof(std::int32_t) + sizeof(std::uint32_t);
 constexpr std::size_t USPEAK_BUFFERSIZE = 1022;
 
 USpeakNative::USpeakLite::USpeakLite()
     : m_run(true)
     , m_lock(false)
-    , m_opusCodec(std::make_shared<USpeakNative::OpusCodec::OpusCodec>(48000, 2, USpeakNative::OpusCodec::OpusFrametime::Frametime_20ms))
+    , m_opusCodec(std::make_shared<USpeakNative::OpusCodec::OpusCodec>(48000, 1, USpeakNative::OpusCodec::OpusFrametime::Frametime_20ms))
     , m_frameQueue()
     , m_processingThread(&USpeakNative::USpeakLite::processingLoop, this)
     , m_lastBandMode()
@@ -50,7 +50,7 @@ USpeakNative::OpusCodec::BandMode USpeakNative::USpeakLite::bandMode() const
     return m_bandMode;
 }
 
-std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::int32_t packetTime, std::span<std::byte> buffer)
+std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::uint32_t packetTime, std::span<std::byte> buffer)
 {
     USpeakNative::Internal::ScopedSpinLock l(m_lock);
 
@@ -59,7 +59,7 @@ std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::
     }
 
     USpeakNative::Helpers::ConvertToBytes<std::int32_t>(buffer.data(), 0, playerId); // Set 4 bytes for playerId
-    USpeakNative::Helpers::ConvertToBytes<std::int32_t>(buffer.data(), 4, packetTime); // Set 4 bytes for packetTime
+    USpeakNative::Helpers::ConvertToBytes<std::uint32_t>(buffer.data(), 4, packetTime); // Set 4 bytes for packetTime
 
     std::size_t sizeWritten = 8;
 
@@ -134,7 +134,7 @@ bool USpeakNative::USpeakLite::decodePacket(std::span<const std::byte> dataIn, U
 
     // Copy over header
     packetOut.playerId = USpeakNative::Helpers::ConvertFromBytes<std::int32_t>(dataIn.data(), 0);
-    packetOut.packetTime = USpeakNative::Helpers::ConvertFromBytes<std::int32_t>(dataIn.data(), 4);
+    packetOut.packetTime = USpeakNative::Helpers::ConvertFromBytes<std::uint32_t>(dataIn.data(), 4);
     packetOut.pcmSamples.clear();
 
     // Get all the audio packets, and decode them into float32 samples

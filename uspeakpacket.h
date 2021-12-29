@@ -8,7 +8,7 @@ namespace USpeakNative {
 
 struct USpeakPacket {
     std::int32_t playerId;
-    std::int32_t packetTime;
+    std::uint32_t packetTime;
     std::vector<float> pcmSamples;
 };
 
