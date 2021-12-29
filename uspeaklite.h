@@ -1,6 +1,7 @@
 #ifndef USPEAK_USPEAKLITE_H
 #define USPEAK_USPEAKLITE_H
 
+#include "uspeakpacket.h"
 #include "uspeakframecontainer.h"
 #include "opuscodec/opuscodec.h"
 #include "opuscodec/bandmode.h"
@@ -26,7 +27,10 @@ public:
     USpeakNative::OpusCodec::BandMode bandMode() const;
 
     std::size_t getAudioFrame(std::int32_t playerId, std::int32_t packetTime, std::span<std::byte> buffer);
-    std::size_t recodeAudioFrame(std::span<const std::byte> packetTimer, std::span<std::byte> buffer);
+
+    std::size_t encodePacket(const USpeakNative::USpeakPacket& packet, std::vector<std::byte>& dataOut);
+    bool decodePacket(std::span<const std::byte> dataIn, USpeakNative::USpeakPacket& packetOut);
+
     bool streamFile(std::string_view filename);
 private:
     void processingLoop();

@@ -6,14 +6,13 @@
 #include <fmt/format.h>
 #include <opus.h>
 
-USpeakNative::OpusCodec::OpusCodec::OpusCodec(int frequency, int bitrate, USpeakNative::OpusCodec::OpusDelay delay)
+USpeakNative::OpusCodec::OpusCodec::OpusCodec(int sampleRate, int channels, USpeakNative::OpusCodec::OpusFrametime frametime)
     : m_encoder(nullptr)
     , m_decoder(nullptr)
-    , m_app(OPUS_APPLICATION_VOIP)
-    , m_frequency(frequency)
-    , m_bitrate(bitrate)
-    , m_delay((int)delay)
-    , m_segmentFrames((int)delay * (frequency / 1000))
+    , m_channels(channels)
+    , m_sampleRate(sampleRate)
+    , m_frametime(frametime)
+    , m_frameSize(channels * (int)frametime * (sampleRate / 1000))
     , m_encodeBuffer()
     , m_decodeBuffer()
 {
@@ -27,12 +26,12 @@ USpeakNative::OpusCodec::OpusCodec::~OpusCodec()
 bool USpeakNative::OpusCodec::OpusCodec::init()
 {
     int err;
-    m_encoder = opus_encoder_create(m_frequency, 1, m_app, &err);
+    m_encoder = opus_encoder_create(m_sampleRate, m_channels, OPUS_APPLICATION_VOIP, &err);
     if (err != OPUS_OK) {
         destroyCodecs();
         return false;
     }
-    err = opus_encoder_ctl(m_encoder, OPUS_SET_BITRATE(m_bitrate));
+    err = opus_encoder_ctl(m_encoder, OPUS_SET_BITRATE(m_sampleRate * sizeof(float) * 8));
     if (err != OPUS_OK) {
         destroyCodecs();
         return false;
@@ -48,7 +47,7 @@ bool USpeakNative::OpusCodec::OpusCodec::init()
         return false;
     }
 
-    m_decoder = opus_decoder_create(m_frequency, 1, &err);
+    m_decoder = opus_decoder_create(m_sampleRate, m_channels, &err);
     if (err != OPUS_OK) {
         destroyCodecs();
         return false;
@@ -59,7 +58,7 @@ bool USpeakNative::OpusCodec::OpusCodec::init()
 
 std::size_t USpeakNative::OpusCodec::OpusCodec::sampleSize() noexcept
 {
-    return m_segmentFrames;
+    return m_frameSize;
 }
 
 std::span<const std::byte> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::span<const float> samples, USpeakNative::OpusCodec::BandMode mode)
@@ -71,10 +70,10 @@ std::span<const std::byte> USpeakNative::OpusCodec::OpusCodec::encodeFloat(std::
         return {};
     }
 
-    if (samples.size() != m_segmentFrames) {
+    if (samples.size() != m_frameSize) {
         fmt::print("[USpeakNative] OpusCodec: Encode failed! Input PCM data is {} frames, expected {}\n",
                    samples.size(),
-                   m_segmentFrames);
+                   m_frameSize);
         return {};
     }
 

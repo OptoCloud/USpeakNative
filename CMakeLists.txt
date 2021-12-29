@@ -23,6 +23,7 @@ add_library(${project} STATIC
     helpers.h
     uspeaklite.cpp
     uspeaklite.h
+    uspeakpacket.h
     uspeakframecontainer.cpp
     uspeakframecontainer.h
     uspeakvolume.cpp
@@ -31,11 +32,11 @@ add_library(${project} STATIC
     uspeakresampler.h
     opuscodec/opuscodec.h
     opuscodec/opuscodec.cpp
-    opuscodec/opusdelay.h
     opuscodec/opuserror.h
     opuscodec/bandmode.h
     opuscodec/bitrates.h
     opuscodec/opusapp.h
+    opuscodec/opusframetime.h
     internal/scopedspinlock.h
     internal/scopedtrylock.h
 )

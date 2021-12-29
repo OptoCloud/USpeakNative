@@ -1,7 +1,7 @@
 #ifndef USPEAK_OPUSCODEC_H
 #define USPEAK_OPUSCODEC_H
 
-#include "opusdelay.h"
+#include "opusframetime.h"
 #include "bandmode.h"
 
 #include <vector>
@@ -16,7 +16,7 @@ namespace USpeakNative::OpusCodec {
 class OpusCodec
 {
 public:
-    OpusCodec(int frequency, int bitrate, USpeakNative::OpusCodec::OpusDelay delay);
+    OpusCodec(int sampleRate, int channels, USpeakNative::OpusCodec::OpusFrametime frametime);
     ~OpusCodec();
 
     bool init();
@@ -29,11 +29,10 @@ private:
 
     OpusEncoder* m_encoder;
     OpusDecoder* m_decoder;
-    int m_app;
-    int m_frequency;
-    int m_bitrate;
-    int m_delay;
-    std::size_t m_segmentFrames;
+    int m_sampleRate;
+    int m_channels;
+    USpeakNative::OpusCodec::OpusFrametime m_frametime;
+    std::size_t m_frameSize;
     std::array<std::byte, 1024> m_encodeBuffer;
     std::array<float, 4096> m_decodeBuffer;
 };

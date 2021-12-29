@@ -15,7 +15,7 @@ constexpr std::size_t USPEAK_BUFFERSIZE = 1022;
 USpeakNative::USpeakLite::USpeakLite()
     : m_run(true)
     , m_lock(false)
-    , m_opusCodec(std::make_shared<USpeakNative::OpusCodec::OpusCodec>(48000, 24000, USpeakNative::OpusCodec::OpusDelay::Delay_20ms))
+    , m_opusCodec(std::make_shared<USpeakNative::OpusCodec::OpusCodec>(48000, 2, USpeakNative::OpusCodec::OpusFrametime::Frametime_20ms))
     , m_frameQueue()
     , m_processingThread(&USpeakNative::USpeakLite::processingLoop, this)
     , m_lastBandMode()
@@ -83,24 +83,66 @@ std::size_t USpeakNative::USpeakLite::getAudioFrame(std::int32_t playerId, std::
     return sizeWritten;
 }
 
-std::size_t USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::byte> dataIn, std::span<std::byte> buffer)
+std::size_t USpeakNative::USpeakLite::encodePacket(const USpeakPacket& packet, std::vector<std::byte>& dataOut)
 {
-    if (dataIn.size() <= USPEAK_HEADERSIZE) {
-        fmt::print("[USpeakNative] Audioframe too small!\n");
+    std::size_t sampleSize = m_opusCodec->sampleSize();
+    std::uint16_t frameIndex = 0;
+
+    // Make sure the number of samples is a multiple of the codec sample size
+    std::size_t nSamples = packet.pcmSamples.size();
+    std::size_t nSamplesFrames = nSamples / sampleSize;
+    std::size_t wholeSampleFrames = nSamplesFrames * sampleSize;
+    if (wholeSampleFrames != nSamples) {
+        fmt::print("[USpeakNative] AudioPacket audio has incorrect padding size! (Should be padded to %llu samples)\n", sampleSize);
         return 0;
     }
 
     // Copy over header
-    std::copy(dataIn.begin(), dataIn.begin() + USPEAK_HEADERSIZE, buffer.begin());
+    dataOut.resize(USPEAK_HEADERSIZE);
+    USpeakNative::Helpers::ConvertToBytes(dataOut.data(), 0, packet.playerId);
+    USpeakNative::Helpers::ConvertToBytes(dataOut.data(), 4, packet.packetTime);
+
+
+    std::size_t sizeWritten = USPEAK_HEADERSIZE;
+
+    USpeakNative::USpeakFrameContainer container;
+
+    // Encode
+    auto it_a = packet.pcmSamples.begin();
+    auto it_end = packet.pcmSamples.end();
+    while (it_a != it_end) {
+        auto it_b = it_a + sampleSize;
+
+        bool ok = container.fromData(m_opusCodec->encodeFloat(std::span<const float>(it_a, it_b), USpeakNative::OpusCodec::BandMode::Opus48k), frameIndex++);
+
+        if (ok) {
+            auto data = container.encodedData();
+            std::copy(data.begin(), data.end(), dataOut.begin() + sizeWritten); // TODO: this can be improved by having a container which references data in the uspeakpacket
+            sizeWritten += data.size();
+        }
+
+        it_a = it_b;
+    }
+}
+
+bool USpeakNative::USpeakLite::decodePacket(std::span<const std::byte> dataIn, USpeakPacket& packetOut)
+{
+    if (dataIn.size() <= USPEAK_HEADERSIZE) {
+        fmt::print("[USpeakNative] Audioframe too small!\n");
+        return false;
+    }
+
+    // Copy over header
+    packetOut.playerId = USpeakNative::Helpers::ConvertFromBytes<std::int32_t>(dataIn.data(), 0);
+    packetOut.packetTime = USpeakNative::Helpers::ConvertFromBytes<std::int32_t>(dataIn.data(), 4);
+    packetOut.pcmSamples.clear();
 
     // Get all the audio packets, and decode them into float32 samples
     std::size_t sizeRead = USPEAK_HEADERSIZE;
-    std::size_t sizeWritten = USPEAK_HEADERSIZE;
 
-    std::vector<float> received;
-    received.reserve(8192);
     USpeakNative::USpeakFrameContainer container;
 
+    // Decode
     while (sizeRead < dataIn.size()) {
         if (!container.decode(dataIn, sizeRead)) {
             break;
@@ -110,45 +152,11 @@ std::size_t USpeakNative::USpeakLite::recodeAudioFrame(std::span<const std::byte
         sizeRead += container.encodedData().size();
 
         if (hmm.size() > 0) {
-            received.insert(received.end(), hmm.begin(), hmm.end());
+            packetOut.pcmSamples.insert(packetOut.pcmSamples.end(), hmm.begin(), hmm.end());
         }
     }
 
-    std::vector<float> resampled;
-    resampled.reserve(received.size());
-    USpeakNative::Resample(received, 48000, resampled, 24000);
-
-    std::size_t sampleSize = m_opusCodec->sampleSize();
-    std::uint16_t frameIndex = 0;
-
-    // Make sure the number of samples is a multiple of the codec sample size
-    std::size_t nSamples = resampled.size();
-    std::size_t nSamplesFrames = nSamples / sampleSize;
-    std::size_t wholeSampleFrames = nSamplesFrames * sampleSize;
-    if (wholeSampleFrames != nSamples) {
-        resampled.resize(wholeSampleFrames + sampleSize);
-    }
-
-    NormalizeGain(resampled);
-
-    // Encode
-    auto it_a = resampled.begin();
-    auto it_end = resampled.end();
-    while (it_a != it_end) {
-        auto it_b = it_a + sampleSize;
-
-        bool ok = container.fromData(m_opusCodec->encodeFloat(std::span<float>(it_a, it_b), USpeakNative::OpusCodec::BandMode::Opus48k), frameIndex++);
-
-        if (ok) {
-            auto data = container.encodedData();
-            std::copy(data.begin(), data.end(), buffer.begin() + sizeWritten);
-            sizeWritten += data.size();
-        }
-
-        it_a = it_b;
-    }
-
-    return sizeWritten;
+    return true;
 }
 
 bool USpeakNative::USpeakLite::streamFile(std::string_view filename)
