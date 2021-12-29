@@ -54,3 +54,22 @@ target_link_libraries(${project} PRIVATE
     fmt::fmt
     libnyquist
 )
+
+
+add_executable(USpeakTest
+    test/main.cpp
+    test/base64.h
+)
+
+add_subdirectory(test/json)
+
+target_include_directories(USpeakTest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    external/libnyquist/include
+    test/json/include
+)
+target_link_libraries(USpeakTest PRIVATE
+    ${project}
+    nlohmann_json
+    libnyquist
+)

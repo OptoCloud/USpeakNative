@@ -7,3 +7,6 @@
 [submodule "opus"]
 	path = external/opus
 	url = https://github.com/xiph/opus.git
+[submodule "test/json"]
+	path = test/json
+	url = https://github.com/nlohmann/json.git
