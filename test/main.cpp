@@ -26,7 +26,7 @@ int main(int argc, char**argv) {
         return EXIT_FAILURE;
     }
 
-    std::ifstream ifs(argv[1]);
+    std::fstream ifs(argv[1], std::ios::in);
     if (!ifs.is_open()) {
         printf("failed to open logfile!");
         return EXIT_FAILURE;
@@ -39,7 +39,7 @@ int main(int argc, char**argv) {
     std::vector<std::byte> rawData;
     std::vector<USpeakNative::USpeakPacket> packets;
 
-    std::int32_t firstId = 0;
+    // std::int32_t firstId = 0;
 
     auto json = nlohmann::json::parse(ifs);
     for (const auto& entry : json) {
@@ -60,13 +60,24 @@ int main(int argc, char**argv) {
         USpeakNative::USpeakPacket packet;
         if (!uSpeak.decodePacket(rawData, packet)) {
             printf("Decoding error!\n");
+            return EXIT_FAILURE;
         }
 
+        std::vector<std::byte> rawDataCpy;
+        if (!uSpeak.encodePacket(packet, rawDataCpy)) {
+            printf("Encoding error!\n");
+            return EXIT_FAILURE;
+        }/*
+        if (rawData != rawDataCpy) {
+            printf("DIFFERENT!\n");
+            return EXIT_FAILURE;
+        }*/
+/*
         if (firstId == 0) {
             firstId = packet.playerId;
             printf("PlayerID: %i\n", firstId);
         } else if (packet.playerId != firstId) continue;
-
+*/
         if (packet.packetTime < startMs) {
             startMs = packet.packetTime;
         } else if (packet.packetTime > endMs) {

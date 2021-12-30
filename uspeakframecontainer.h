@@ -9,16 +9,19 @@ namespace USpeakNative {
 
 struct USpeakFrameContainer
 {
+    static std::size_t WriteContainer(std::vector<std::byte>& frameData, std::size_t frameDataOffset, std::span<const std::byte> opusData, std::uint16_t frameIndex);
+    static std::size_t ReadContainer(std::vector<std::byte>& opusData, std::uint16_t& frameIndex, std::span<const std::byte> frameData);
+
     USpeakFrameContainer();
 
-    bool fromData(std::span<const std::byte> data, std::uint16_t frameIndex);
-    bool decode(std::span<const std::byte> data, std::size_t offset);
+    std::size_t fromData(std::span<const std::byte> opusData, std::uint16_t frameIndex);
+    std::size_t decode(std::span<const std::byte> frameData);
 
-    std::span<const std::byte> encodedData() const;
-    std::span<const std::byte> decodedData() const;
+    std::span<const std::byte> encodedData() const noexcept;
+    std::span<const std::byte> decodedData() const noexcept;
 
-    std::uint16_t frameIndex() const;
-    std::uint16_t frameSize() const;
+    std::uint16_t frameIndex() const noexcept;
+    std::uint16_t frameSize() const noexcept;
 private:
     std::vector<std::byte> m_data;
 };

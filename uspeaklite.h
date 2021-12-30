@@ -23,12 +23,10 @@ public:
     USpeakLite();
     ~USpeakLite();
 
-    int audioFrequency() const;
     USpeakNative::OpusCodec::BandMode bandMode() const;
-
     std::size_t getAudioFrame(std::int32_t playerId, std::uint32_t packetTime, std::span<std::byte> buffer);
 
-    std::size_t encodePacket(const USpeakNative::USpeakPacket& packet, std::vector<std::byte>& dataOut);
+    bool encodePacket(const USpeakNative::USpeakPacket& packet, std::vector<std::byte>& dataOut);
     bool decodePacket(std::span<const std::byte> dataIn, USpeakNative::USpeakPacket& packetOut);
 
     bool streamFile(std::string_view filename);
@@ -40,11 +38,7 @@ private:
     std::shared_ptr<OpusCodec::OpusCodec> m_opusCodec;
     std::queue<USpeakFrameContainer> m_frameQueue;
     std::thread m_processingThread;
-
-    USpeakNative::OpusCodec::BandMode m_lastBandMode;
     USpeakNative::OpusCodec::BandMode m_bandMode;
-    int m_recFreq;
-    std::uint16_t m_ind;
 };
 
 }
