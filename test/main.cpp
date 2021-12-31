@@ -197,6 +197,7 @@ int main(int argc, char**argv) {
             return EXIT_FAILURE;
         }
 
+        PrintGraph<float, 200, 80>(packet.audioSamples);
         meaner.Add(packet.audioSamples);
 /*
         std::vector<std::byte> reEncoded;
