@@ -39,6 +39,10 @@ private:
     std::queue<USpeakFrameContainer> m_frameQueue;
     std::thread m_processingThread;
     USpeakNative::OpusCodec::BandMode m_bandMode;
+
+    float m_currentScale;
+    float m_runningScale;
+    float m_targetRms;
 };
 
 }

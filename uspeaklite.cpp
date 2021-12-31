@@ -19,6 +19,9 @@ USpeakNative::USpeakLite::USpeakLite()
     , m_frameQueue()
     , m_processingThread(&USpeakNative::USpeakLite::processingLoop, this)
     , m_bandMode(USpeakNative::OpusCodec::BandMode::Opus48k)
+    , m_currentScale(1.f)
+    , m_runningScale(1.f)
+    , m_targetRms(1.f)
 {
     fmt::print("[USpeakNative] Made by OptoCloud\n");
     if (!m_opusCodec->init()) {
@@ -94,7 +97,6 @@ bool USpeakNative::USpeakLite::encodePacket(const USpeakPacket& packet, std::vec
     USpeakNative::Helpers::ConvertToBytes(dataOut.data(), 0, packet.playerId);
     USpeakNative::Helpers::ConvertToBytes(dataOut.data(), 4, packet.packetTime);
 
-
     std::size_t dataOffset = USPEAK_HEADERSIZE;
 
     USpeakNative::USpeakFrameContainer container;
@@ -141,6 +143,8 @@ bool USpeakNative::USpeakLite::decodePacket(std::span<const std::byte> dataIn, U
             packetOut.audioSamples.insert(packetOut.audioSamples.end(), opusData.begin(), opusData.end());
         }
     }
+
+    USpeakNative::AutoLevel(packetOut.audioSamples, USpeakNative::GetRMS(packetOut.audioSamples), m_targetRms, m_currentScale, m_runningScale);
 
     return true;
 }
